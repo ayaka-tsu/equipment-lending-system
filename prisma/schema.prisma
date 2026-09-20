@@ -8,9 +8,11 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// 接続先（DATABASE_URL）は prisma7.config.ts に書く。
+// Prisma 7 では datasource に url を書けない。
+// アプリ側は src/lib/prisma.ts でドライバアダプタに接続文字列を渡している。
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 /// 社員

@@ -18,7 +18,9 @@
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:perf": "tsx scripts/generate-perf-data.ts",
+    "perf:measure": "tsx scripts/measure-queries.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

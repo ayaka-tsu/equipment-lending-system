@@ -315,19 +315,21 @@ npm run db:migrate
 
 ## 6. npm スクリプト一覧
 
-| コマンド             | 内容                                                                |
-| -------------------- | ------------------------------------------------------------------- |
-| `npm run dev`        | 開発サーバーを起動する                                              |
-| `npm run build`      | 本番用にビルドする                                                  |
-| `npm run start`      | ビルドしたものを起動する                                            |
-| `npm run lint`       | ESLint でチェックする（`npm run lint:fix` で自動修正）              |
-| `npm run format`     | Prettier で整形する（`npm run format:check` で確認だけ）            |
-| `npm run typecheck`  | TypeScript の型チェックをする                                       |
-| `npm test`           | テストを実行する（`npm run test:watch` で変更を監視）               |
-| `npm run db:migrate` | マイグレーションを実行してテーブルを最新にする                      |
-| `npm run db:seed`    | 初期データを入れる（何度実行しても同じ結果になる）                  |
-| `npm run db:reset`   | DB を作り直してマイグレーションとシードを実行する（データは消える） |
-| `npm run db:studio`  | Prisma Studio でテーブルの中身をブラウザから見る                    |
+| コマンド               | 内容                                                                |
+| ---------------------- | ------------------------------------------------------------------- |
+| `npm run dev`          | 開発サーバーを起動する                                              |
+| `npm run build`        | 本番用にビルドする                                                  |
+| `npm run start`        | ビルドしたものを起動する                                            |
+| `npm run lint`         | ESLint でチェックする（`npm run lint:fix` で自動修正）              |
+| `npm run format`       | Prettier で整形する（`npm run format:check` で確認だけ）            |
+| `npm run typecheck`    | TypeScript の型チェックをする                                       |
+| `npm test`             | テストを実行する（`npm run test:watch` で変更を監視）               |
+| `npm run db:migrate`   | マイグレーションを実行してテーブルを最新にする                      |
+| `npm run db:seed`      | 初期データを入れる（何度実行しても同じ結果になる）                  |
+| `npm run db:reset`     | DB を作り直してマイグレーションとシードを実行する（データは消える） |
+| `npm run db:studio`    | Prisma Studio でテーブルの中身をブラウザから見る                    |
+| `npm run db:perf`      | 性能検証用データを入れる（`-- --clean` で削除）                     |
+| `npm run perf:measure` | 主要クエリの応答時間を測る（NFR-P-01 の確認）                       |
 
 ### コミット前・push 前の自動チェック
 

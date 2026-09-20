@@ -1,0 +1,23 @@
+# ローカル開発用の PostgreSQL。アプリ本体はコンテナに入れず、ホストで `npm run dev` する。
+name: equipment-lending
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: equipment_lending
+    ports:
+      # 5432 はローカルに PostgreSQL を入れている場合にぶつかるため、ホスト側は 5433 を使う
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d equipment_lending"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-data:

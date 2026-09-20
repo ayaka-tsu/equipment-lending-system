@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: lint / typecheck / test / build
+    runs-on: ubuntu-latest
+
+    services:
+      # ローカル開発（compose.yaml）と同じ PostgreSQL のメジャーバージョンを使う
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: equipment_lending
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d equipment_lending"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://app:app@localhost:5433/equipment_lending
+      APP_ORIGIN: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: 依存パッケージのインストール
+        run: npm ci
+
+      - name: マイグレーションの適用
+        run: npx prisma migrate deploy
+
+      - name: Lint
+        run: npm run lint
+
+      - name: 整形の確認
+        run: npm run format:check
+
+      - name: 型チェック
+        run: npm run typecheck
+
+      - name: テスト
+        run: npm test
+
+      - name: ビルド
+        run: npm run build

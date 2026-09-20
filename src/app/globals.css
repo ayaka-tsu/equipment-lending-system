@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/*
+ * デザイントークン。Figma の Tokens コレクションと同じ値をそろえている。
+ * https://www.figma.com/design/1ObWsUfnxoIEvQl86inEBv
+ * 色を直接書かず、必ずここのトークン（Tailwind のクラス）を使う。
+ */
+@theme {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-subtle: #eff6ff;
+
+  --color-page: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-subtle: #f1f3f5;
+  --color-overlay: #111827;
+
+  --color-border: #e2e5ea;
+  --color-border-strong: #c9ced6;
+
+  --color-text: #1f2328;
+  --color-text-secondary: #5b6470;
+  --color-text-muted: #8a919c;
+  --color-text-on-primary: #ffffff;
+
+  --color-danger: #dc2626;
+  --color-danger-subtle: #fef2f2;
+  --color-danger-border: #fecaca;
+
+  --color-success-subtle: #ecfdf5;
+  --color-success-border: #a7f3d0;
+  --color-success-text: #065f46;
+
+  --color-warning-subtle: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-warning-text: #92400e;
+
+  /* 申請・備品の状態バッジ（docs/03_screen_list.md 3.4） */
+  --color-status-pending-bg: #fef3c7;
+  --color-status-pending-fg: #92400e;
+  --color-status-approved-bg: #dbeafe;
+  --color-status-approved-fg: #1e40af;
+  --color-status-lent-bg: #dcfce7;
+  --color-status-lent-fg: #166534;
+  --color-status-overdue-bg: #fee2e2;
+  --color-status-overdue-fg: #991b1b;
+  --color-status-neutral-bg: #eef0f3;
+  --color-status-neutral-fg: #4b5563;
+  --color-status-outofstock-bg: #ffedd5;
+  --color-status-outofstock-fg: #9a3412;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --font-sans: var(--font-noto-sans-jp), sans-serif;
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-text);
+}

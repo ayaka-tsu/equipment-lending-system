@@ -1,0 +1,3 @@
+# push 前：CI で落ちる前に、型チェックとテストをここで通す
+npm run typecheck
+npm test

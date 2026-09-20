@@ -1,0 +1,1257 @@
+openapi: 3.1.0
+info:
+  title: 備品貸出管理システム API
+  version: 0.1.0
+  description: |
+    株式会社ノースブリッジ（架空）向け 備品貸出管理システムの API 仕様。
+    共通ルール（ページング、エラー形式、チェックの順番、処理の手順）は docs/06_api_design.md を参照。
+servers:
+  - url: http://localhost:3000
+    description: 開発環境
+tags:
+  - name: auth
+    description: 認証
+  - name: categories
+    description: カテゴリ
+  - name: equipment
+    description: 備品
+  - name: loans
+    description: 貸出申請
+  - name: dashboard
+    description: 管理ダッシュボード
+  - name: audit-logs
+    description: 操作履歴
+security:
+  - cookieAuth: []
+
+paths:
+  /api/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: ログイン
+      description: 成功すると Cookie `session_token` を設定する（FR-01、NFR-S-03）。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: ログインに成功した
+          headers:
+            Set-Cookie:
+              description: 'session_token=...; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800（本番では Secure も付ける）'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: メールアドレスまたはパスワードが正しくない（`INVALID_CREDENTIALS`）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: メールアドレスまたはパスワードが正しくありません。
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: ログアウト
+      description: セッションを DB から削除し、Cookie を削除する（FR-02、NFR-S-04）。
+      responses:
+        '204':
+          description: ログアウトした
+          headers:
+            Set-Cookie:
+              description: 'session_token=; Max-Age=0; Path=/'
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/auth/me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      summary: ログイン中の社員の情報
+      responses:
+        '200':
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /api/categories:
+    get:
+      tags: [categories]
+      operationId: listCategories
+      summary: カテゴリ一覧
+      description: '`sort_order` 昇順、`id` 昇順で全件を返す（ページングなし）。'
+      responses:
+        '200':
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /api/equipment:
+    get:
+      tags: [equipment]
+      operationId: listEquipment
+      summary: 備品一覧・検索
+      description: 削除済みの備品は含めない。`asset_code` 昇順（FR-10）。
+      parameters:
+        - name: q
+          in: query
+          description: 備品名または管理番号の部分一致（大文字・小文字を区別しない）
+          schema:
+            type: string
+            maxLength: 100
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: availableOnly
+          in: query
+          description: '`true` のとき、状態が `active` かつ貸出可能数が1以上の備品だけを返す'
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    post:
+      tags: [equipment]
+      operationId: createEquipment
+      summary: 備品登録（管理者）
+      description: 操作履歴に `equipment.create` を記録する（FR-12、BR-14）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentCreateRequest'
+      responses:
+        '201':
+          description: 登録した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: 管理番号が既に使われている（`ASSET_CODE_ALREADY_EXISTS`。BR-13）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/equipment/{equipmentId}:
+    parameters:
+      - $ref: '#/components/parameters/EquipmentId'
+    get:
+      tags: [equipment]
+      operationId: getEquipment
+      summary: 備品詳細
+      responses:
+        '200':
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [equipment]
+      operationId: updateEquipment
+      summary: 備品編集（管理者）
+      description: |
+        `version` が DB と異なる場合は `EDIT_CONFLICT`（FR-13）。
+        処理の手順は docs/06_api_design.md 4.5 を参照。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentUpdateRequest'
+      responses:
+        '200':
+          description: 更新した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: |
+            - `EDIT_CONFLICT`：他の管理者が先に更新した
+            - `QUANTITY_BELOW_ACTIVE_LOANS`：保有数が引当数より小さい（BR-12）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: QUANTITY_BELOW_ACTIVE_LOANS
+                  message: 保有数は現在の引当数（2）以上にしてください。
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags: [equipment]
+      operationId: deleteEquipment
+      summary: 備品削除（管理者）
+      description: 論理削除する。処理の手順は docs/06_api_design.md 4.6 を参照（FR-14）。
+      responses:
+        '204':
+          description: 削除した
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 未完了の申請がある（`EQUIPMENT_HAS_ACTIVE_LOANS`。BR-11）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/loans:
+    get:
+      tags: [loans]
+      operationId: listLoans
+      summary: 申請一覧・全社員（管理者）
+      description: |
+        並び順：`overdue=true` のとき `due_date` 昇順・`id` 昇順、それ以外は `created_at` 降順・`id` 降順（FR-28）。
+        条件はすべて AND で組み合わせる。
+      parameters:
+        - $ref: '#/components/parameters/LoanStatusFilter'
+        - name: overdue
+          in: query
+          description: '`true` のとき、延滞（BR-06）の申請だけを返す'
+          schema:
+            type: boolean
+        - name: equipmentId
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: borrowerQuery
+          in: query
+          description: 申請者の氏名または社員番号の部分一致
+          schema:
+            type: string
+            maxLength: 50
+        - name: equipmentQuery
+          in: query
+          description: 備品名または管理番号の部分一致
+          schema:
+            type: string
+            maxLength: 100
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    post:
+      tags: [loans]
+      operationId: createLoan
+      summary: 貸出申請
+      description: |
+        処理の手順は docs/06_api_design.md 4.2 を参照（FR-20、BR-01〜05、BR-10）。
+        同時に申請されても、引当数が保有数を超えてはならない（BR-02）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoanCreateRequest'
+      responses:
+        '201':
+          description: 申請した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: |
+            - `EQUIPMENT_SUSPENDED`：備品が貸出停止中（BR-10）
+            - `DUPLICATE_ACTIVE_LOAN`：同じ備品の未完了の申請がある（BR-04）
+            - `OUT_OF_STOCK`：貸出可能数が0（BR-02）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: OUT_OF_STOCK
+                  message: 貸出可能な在庫がありません。
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/me/loans:
+    get:
+      tags: [loans]
+      operationId: listMyLoans
+      summary: 自分の申請一覧
+      description: ログイン中の社員が申請者である申請だけを返す。`created_at` 降順・`id` 降順（FR-21）。
+      parameters:
+        - $ref: '#/components/parameters/LoanStatusFilter'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/loans/{loanId}:
+    parameters:
+      - $ref: '#/components/parameters/LoanId'
+    get:
+      tags: [loans]
+      operationId: getLoan
+      summary: 申請詳細
+      description: 申請者本人と管理者だけが取得できる。一般社員が他人の申請を指定した場合は 404（FR-22、NFR-S-07）。
+      responses:
+        '200':
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/loans/{loanId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/LoanId'
+    post:
+      tags: [loans]
+      operationId: approveLoan
+      summary: 承認（管理者）
+      description: '`pending` → `approved`。申請者本人は承認できない（FR-24、BR-08）。'
+      responses:
+        '200':
+          $ref: '#/components/responses/LoanUpdated'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenOrSelfReview'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
+  /api/loans/{loanId}/reject:
+    parameters:
+      - $ref: '#/components/parameters/LoanId'
+    post:
+      tags: [loans]
+      operationId: rejectLoan
+      summary: 却下（管理者）
+      description: '`pending` → `rejected`。申請者本人は却下できない（FR-25、BR-08、BR-09）。'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/LoanUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenOrSelfReview'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidStatusTransition'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/loans/{loanId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/LoanId'
+    post:
+      tags: [loans]
+      operationId: cancelLoan
+      summary: 取消
+      description: |
+        申請者本人は `pending`・`approved` を、管理者は `approved` を取り消せる（FR-23、BR-16）。
+        一般社員が他人の申請を指定した場合は 404。
+      responses:
+        '200':
+          $ref: '#/components/responses/LoanUpdated'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
+  /api/loans/{loanId}/lend:
+    parameters:
+      - $ref: '#/components/parameters/LoanId'
+    post:
+      tags: [loans]
+      operationId: lendLoan
+      summary: 貸出記録（管理者）
+      description: '`approved` → `lent`（FR-26）。'
+      responses:
+        '200':
+          $ref: '#/components/responses/LoanUpdated'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
+  /api/loans/{loanId}/return:
+    parameters:
+      - $ref: '#/components/parameters/LoanId'
+    post:
+      tags: [loans]
+      operationId: returnLoan
+      summary: 返却記録（管理者）
+      description: '`lent` → `returned`（FR-27）。'
+      responses:
+        '200':
+          $ref: '#/components/responses/LoanUpdated'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
+  /api/dashboard:
+    get:
+      tags: [dashboard]
+      operationId: getDashboard
+      summary: 管理ダッシュボードの集計（管理者）
+      description: FR-31。カテゴリは備品が0件でも含め、`sort_order` 昇順で返す。
+      responses:
+        '200':
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/audit-logs:
+    get:
+      tags: [audit-logs]
+      operationId: listAuditLogs
+      summary: 操作履歴一覧（管理者）
+      description: |
+        `created_at` 降順・`id` 降順（FR-33）。
+        期間の扱いは docs/06_api_design.md 4.8 を参照。
+      parameters:
+        - name: action
+          in: query
+          schema:
+            $ref: '#/components/schemas/AuditAction'
+        - name: actorQuery
+          in: query
+          description: 操作者の氏名の部分一致
+          schema:
+            type: string
+            maxLength: 50
+        - name: from
+          in: query
+          description: この日（日本時間）以降
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: この日（日本時間）まで（この日を含む）
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: 取得した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session_token
+
+  parameters:
+    EquipmentId:
+      name: equipmentId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    LoanId:
+      name: loanId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      name: perPage
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    LoanStatusFilter:
+      name: status
+      in: query
+      description: カンマ区切りで複数指定できる（例：`pending,approved`）
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/LoanStatus'
+
+  responses:
+    LoanUpdated:
+      description: 状態を変更した。変更後の申請を返す。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LoanDetail'
+    BadRequest:
+      description: JSON として読めない（`BAD_REQUEST`）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthenticated:
+      description: 未ログイン、またはセッション切れ（`UNAUTHENTICATED`）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHENTICATED
+              message: ログインが必要です。
+    Forbidden:
+      description: 権限がない、または `Origin` が不正（`FORBIDDEN`）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: FORBIDDEN
+              message: この操作を行う権限がありません。
+    ForbiddenOrSelfReview:
+      description: |
+        - `FORBIDDEN`：管理者でない、または `Origin` が不正
+        - `SELF_REVIEW_FORBIDDEN`：自分の申請を承認・却下しようとした（BR-08）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: SELF_REVIEW_FORBIDDEN
+              message: 自分の申請は承認・却下できません。
+    NotFound:
+      description: 存在しない、削除済み、または閲覧する権限がない（`NOT_FOUND`）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: 対象のデータが見つかりません。
+    ValidationFailed:
+      description: 入力値が不正（`VALIDATION_ERROR`）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: 入力内容に誤りがあります。
+              details:
+                - field: dueDate
+                  message: 返却予定日は明日から30日後までの日付を指定してください
+    InvalidStatusTransition:
+      description: 現在の状態からはその操作ができない（`INVALID_STATUS_TRANSITION`。BR-07）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INVALID_STATUS_TRANSITION
+              message: この申請は他の操作によって状態が変わっています。最新の状態を確認してください。
+
+  schemas:
+    # ---------- 共通 ----------
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              $ref: '#/components/schemas/ErrorCode'
+            message:
+              type: string
+              description: そのまま画面に表示できる日本語のメッセージ
+            details:
+              type: array
+              description: '`VALIDATION_ERROR` のときだけ入る'
+              items:
+                $ref: '#/components/schemas/ValidationDetail'
+    ErrorCode:
+      type: string
+      enum:
+        - BAD_REQUEST
+        - UNAUTHENTICATED
+        - INVALID_CREDENTIALS
+        - FORBIDDEN
+        - SELF_REVIEW_FORBIDDEN
+        - NOT_FOUND
+        - ASSET_CODE_ALREADY_EXISTS
+        - EDIT_CONFLICT
+        - QUANTITY_BELOW_ACTIVE_LOANS
+        - EQUIPMENT_HAS_ACTIVE_LOANS
+        - OUT_OF_STOCK
+        - DUPLICATE_ACTIVE_LOAN
+        - EQUIPMENT_SUSPENDED
+        - INVALID_STATUS_TRANSITION
+        - VALIDATION_ERROR
+        - INTERNAL_SERVER_ERROR
+    ValidationDetail:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: リクエストのプロパティ名、またはクエリパラメータ名
+          examples: [dueDate]
+        message:
+          type: string
+          examples: [返却予定日は明日から30日後までの日付を指定してください]
+    Pagination:
+      type: object
+      required: [page, perPage, totalCount, totalPages]
+      properties:
+        page:
+          type: integer
+          examples: [2]
+        perPage:
+          type: integer
+          examples: [20]
+        totalCount:
+          type: integer
+          examples: [123]
+        totalPages:
+          type: integer
+          description: '`totalCount` が0のときは0'
+          examples: [7]
+
+    # ---------- 認証・社員 ----------
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          examples: [member1@example.com]
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    Role:
+      type: string
+      enum: [member, admin]
+      description: '`member`：一般社員、`admin`：管理者'
+    User:
+      type: object
+      required: [id, employeeCode, name, email, department, role]
+      properties:
+        id:
+          type: integer
+          examples: [12]
+        employeeCode:
+          type: string
+          examples: [E0012]
+        name:
+          type: string
+          examples: [山田 太郎]
+        email:
+          type: string
+          format: email
+          examples: [member1@example.com]
+        department:
+          type: string
+          examples: [開発部]
+        role:
+          $ref: '#/components/schemas/Role'
+    UserRef:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          examples: [2]
+        name:
+          type: string
+          examples: [佐藤 花子]
+    BorrowerRef:
+      type: object
+      required: [id, employeeCode, name, department]
+      properties:
+        id:
+          type: integer
+          examples: [12]
+        employeeCode:
+          type: string
+          examples: [E0012]
+        name:
+          type: string
+          examples: [山田 太郎]
+        department:
+          type: string
+          examples: [開発部]
+
+    # ---------- カテゴリ ----------
+    Category:
+      type: object
+      required: [id, name, sortOrder]
+      properties:
+        id:
+          type: integer
+          examples: [1]
+        name:
+          type: string
+          examples: [PC]
+        sortOrder:
+          type: integer
+          examples: [10]
+    CategoryRef:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          examples: [1]
+        name:
+          type: string
+          examples: [PC]
+
+    # ---------- 備品 ----------
+    EquipmentStatus:
+      type: string
+      enum: [active, suspended]
+      description: '`active`：通常、`suspended`：貸出停止'
+    EquipmentSummary:
+      type: object
+      required: [id, assetCode, name, category, quantity, availableQuantity, storageLocation, status, updatedAt]
+      properties:
+        id:
+          type: integer
+          examples: [3]
+        assetCode:
+          type: string
+          examples: [PC-0003]
+        name:
+          type: string
+          examples: [ノートPC（14インチ）]
+        category:
+          $ref: '#/components/schemas/CategoryRef'
+        quantity:
+          type: integer
+          description: 保有数
+          examples: [1]
+        availableQuantity:
+          type: integer
+          description: 貸出可能数（保有数 − 引当数。BR-01）
+          examples: [0]
+        storageLocation:
+          type: string
+          examples: [本社3F 総務キャビネット]
+        status:
+          $ref: '#/components/schemas/EquipmentStatus'
+        updatedAt:
+          type: string
+          format: date-time
+          examples: ['2026-09-10T09:22:00.000Z']
+    EquipmentDetail:
+      allOf:
+        - $ref: '#/components/schemas/EquipmentSummary'
+        - type: object
+          required: [description, activeLoanCount, version, createdAt]
+          properties:
+            description:
+              type: [string, 'null']
+              examples: ["Windows 11 / メモリ16GB\n充電器・マウス付き"]
+            activeLoanCount:
+              type: integer
+              description: 引当数（申請中・承認済・貸出中の申請の件数）
+              examples: [1]
+            version:
+              type: integer
+              description: 楽観ロック用。更新時にそのまま送り返す。
+              examples: [4]
+            createdAt:
+              type: string
+              format: date-time
+              examples: ['2026-04-01T00:30:00.000Z']
+    EquipmentCreateRequest:
+      type: object
+      required: [assetCode, name, categoryId, quantity, storageLocation, status]
+      properties:
+        assetCode:
+          type: string
+          pattern: '^[A-Z]{2,4}-[0-9]{4}$'
+          examples: [PC-0041]
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          examples: [ノートPC（14インチ）]
+        categoryId:
+          type: integer
+          description: 存在しないカテゴリなら 422
+          examples: [1]
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+          examples: [1]
+        storageLocation:
+          type: string
+          minLength: 1
+          maxLength: 100
+          examples: [本社3F 総務キャビネット]
+        description:
+          type: [string, 'null']
+          maxLength: 1000
+          description: 空文字は null として保存する
+        status:
+          $ref: '#/components/schemas/EquipmentStatus'
+    EquipmentUpdateRequest:
+      type: object
+      description: '`version` は必須。そのほかは変更する項目だけ送ってもよい。管理番号は変更できない（BR-13）。'
+      required: [version]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        categoryId:
+          type: integer
+          description: 存在しないカテゴリなら 422
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+        storageLocation:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: [string, 'null']
+          maxLength: 1000
+          description: 空文字は null として保存する
+        status:
+          $ref: '#/components/schemas/EquipmentStatus'
+        version:
+          type: integer
+          description: GET で取得した `version`
+          examples: [4]
+    EquipmentListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EquipmentSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    EquipmentRef:
+      type: object
+      description: 申請に含める備品の情報。備品が削除済みでも返す。
+      required: [id, assetCode, name]
+      properties:
+        id:
+          type: integer
+          examples: [3]
+        assetCode:
+          type: string
+          examples: [PC-0003]
+        name:
+          type: string
+          examples: [ノートPC（14インチ）]
+
+    # ---------- 貸出申請 ----------
+    LoanStatus:
+      type: string
+      enum: [pending, approved, lent, returned, rejected, cancelled]
+      description: |
+        - `pending`：申請中
+        - `approved`：承認済
+        - `lent`：貸出中
+        - `returned`：返却済
+        - `rejected`：却下
+        - `cancelled`：取消
+    LoanAction:
+      type: string
+      enum: [approve, reject, cancel, lend, return]
+    Loan:
+      type: object
+      required:
+        - id
+        - status
+        - equipment
+        - borrower
+        - purpose
+        - dueDate
+        - isOverdue
+        - isDueSoon
+        - reviewedBy
+        - reviewedAt
+        - rejectReason
+        - lentAt
+        - returnedAt
+        - cancelledBy
+        - cancelledAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          examples: [118]
+        status:
+          $ref: '#/components/schemas/LoanStatus'
+        equipment:
+          $ref: '#/components/schemas/EquipmentRef'
+        borrower:
+          $ref: '#/components/schemas/BorrowerRef'
+        purpose:
+          type: string
+          examples: [客先常駐で使用するため]
+        dueDate:
+          type: string
+          format: date
+          description: 返却予定日（日本時間の暦日）
+          examples: ['2026-09-20']
+        isOverdue:
+          type: boolean
+          description: 延滞（BR-06）
+        isDueSoon:
+          type: boolean
+          description: 返却期限間近（BR-15）
+        reviewedBy:
+          description: 承認・却下した管理者
+          oneOf:
+            - $ref: '#/components/schemas/UserRef'
+            - type: 'null'
+        reviewedAt:
+          type: [string, 'null']
+          format: date-time
+        rejectReason:
+          type: [string, 'null']
+        lentAt:
+          type: [string, 'null']
+          format: date-time
+        returnedAt:
+          type: [string, 'null']
+          format: date-time
+        cancelledBy:
+          description: 取り消した人
+          oneOf:
+            - $ref: '#/components/schemas/UserRef'
+            - type: 'null'
+        cancelledAt:
+          type: [string, 'null']
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+          description: 申請日時
+          examples: ['2026-09-05T01:12:00.000Z']
+        updatedAt:
+          type: string
+          format: date-time
+    LoanDetail:
+      allOf:
+        - $ref: '#/components/schemas/Loan'
+        - type: object
+          required: [allowedActions]
+          properties:
+            allowedActions:
+              type: array
+              description: ログイン中の利用者が、この申請に今実行できる操作（docs/06_api_design.md 4.4）
+              items:
+                $ref: '#/components/schemas/LoanAction'
+              examples: [[approve, reject]]
+    LoanCreateRequest:
+      type: object
+      required: [equipmentId, dueDate, purpose]
+      properties:
+        equipmentId:
+          type: integer
+          description: 存在しない・削除済みの備品なら 404
+          examples: [3]
+        dueDate:
+          type: string
+          format: date
+          description: 申請日の翌日から30日後まで（日本時間。BR-05）
+          examples: ['2026-09-20']
+        purpose:
+          type: string
+          minLength: 1
+          maxLength: 200
+          examples: [客先常駐で使用するため]
+    RejectRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+          examples: [修理予定のため]
+    LoanListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Loan'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ---------- ダッシュボード ----------
+    Dashboard:
+      type: object
+      required: [counts, categories]
+      properties:
+        counts:
+          type: object
+          required: [pending, approved, lent, overdue]
+          properties:
+            pending:
+              type: integer
+              description: 承認待ち（`pending` の件数）
+              examples: [3]
+            approved:
+              type: integer
+              description: 受取待ち（`approved` の件数）
+              examples: [1]
+            lent:
+              type: integer
+              description: 貸出中（`lent` の件数。延滞を含む）
+              examples: [42]
+            overdue:
+              type: integer
+              description: 延滞の件数（BR-06）
+              examples: [2]
+        categories:
+          type: array
+          items:
+            type: object
+            required: [categoryId, categoryName, totalQuantity, lentCount]
+            properties:
+              categoryId:
+                type: integer
+                examples: [1]
+              categoryName:
+                type: string
+                examples: [PC]
+              totalQuantity:
+                type: integer
+                description: 削除していない備品の保有数の合計（貸出停止中を含む）
+                examples: [40]
+              lentCount:
+                type: integer
+                description: '`lent` の申請の件数'
+                examples: [31]
+
+    # ---------- 操作履歴 ----------
+    AuditAction:
+      type: string
+      enum:
+        - equipment.create
+        - equipment.update
+        - equipment.delete
+        - loan.request
+        - loan.approve
+        - loan.reject
+        - loan.cancel
+        - loan.lend
+        - loan.return
+    AuditLog:
+      type: object
+      required: [id, action, actor, targetType, targetId, detail, createdAt]
+      properties:
+        id:
+          type: integer
+          examples: [2051]
+        action:
+          $ref: '#/components/schemas/AuditAction'
+        actor:
+          $ref: '#/components/schemas/UserRef'
+        targetType:
+          type: string
+          enum: [equipment, loan]
+        targetId:
+          type: integer
+          examples: [3]
+        detail:
+          type: object
+          description: 操作種別ごとの形式は docs/05_table_definitions.md 3.6 を参照
+          additionalProperties: true
+          examples:
+            - assetCode: PC-0003
+              name: ノートPC（14インチ）
+              changes:
+                status:
+                  before: active
+                  after: suspended
+        createdAt:
+          type: string
+          format: date-time
+          examples: ['2026-09-13T01:02:00.000Z']
+    AuditLogListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        pagination:
+          $ref: '#/components/schemas/Pagination'

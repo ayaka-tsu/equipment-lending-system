@@ -1,0 +1,143 @@
+// 備品貸出管理システム のデータベース定義
+// 仕様: docs/05_table_definitions.md / docs/04_er_diagram.md
+// CHECK 制約と部分ユニークインデックスは schema.prisma では表現できないため、
+// マイグレーションの SQL に直接書いている（prisma/migrations/*/migration.sql）。
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// 社員
+model User {
+  id           Int      @id @default(autoincrement())
+  employeeCode String   @unique(map: "uq_users_employee_code") @map("employee_code") @db.VarChar(10)
+  name         String   @db.VarChar(50)
+  /// 小文字にそろえて保存する
+  email        String   @unique(map: "uq_users_email") @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  department   String   @db.VarChar(50)
+  /// member | admin（CHECK 制約 chk_users_role）
+  role         String   @default("member") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sessions       Session[]
+  loans          Loan[]     @relation("LoanBorrower")
+  reviewedLoans  Loan[]     @relation("LoanReviewer")
+  cancelledLoans Loan[]     @relation("LoanCanceller")
+  auditLogs      AuditLog[]
+
+  @@map("users")
+}
+
+/// セッション
+model Session {
+  /// セッショントークンの SHA-256（トークンそのものは保存しない）
+  tokenHash String   @id @map("token_hash") @db.VarChar(64)
+  userId    Int      @map("user_id")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, map: "fk_sessions_user_id")
+
+  @@index([userId], map: "idx_sessions_user_id")
+  @@map("sessions")
+}
+
+/// カテゴリ
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique(map: "uq_categories_name") @db.VarChar(30)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  equipment Equipment[]
+
+  @@map("categories")
+}
+
+/// 備品
+model Equipment {
+  id Int @id @default(autoincrement())
+  /// 管理番号。形式 ^[A-Z]{2,4}-[0-9]{4}$。登録後は変更しない（BR-13）
+  assetCode       String    @unique(map: "uq_equipment_asset_code") @map("asset_code") @db.VarChar(20)
+  name            String    @db.VarChar(100)
+  categoryId      Int       @map("category_id")
+  /// 保有数（CHECK 制約 chk_equipment_quantity で 1〜99）
+  quantity        Int
+  storageLocation String    @map("storage_location") @db.VarChar(100)
+  description     String?   @db.VarChar(1000)
+  /// active | suspended（CHECK 制約 chk_equipment_status）
+  status          String    @default("active") @db.VarChar(20)
+  /// 楽観ロック用。更新のたびに 1 増やす（FR-13）
+  version         Int       @default(1)
+  /// 論理削除。NULL なら未削除（FR-14）
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict, map: "fk_equipment_category_id")
+  loans    Loan[]
+
+  @@index([categoryId], map: "idx_equipment_category_id")
+  @@map("equipment")
+}
+
+/// 貸出申請
+model Loan {
+  id          Int @id @default(autoincrement())
+  equipmentId Int @map("equipment_id")
+  borrowerId  Int @map("borrower_id")
+  /// pending | approved | lent | returned | rejected | cancelled（CHECK 制約 chk_loans_status）
+  status       String    @default("pending") @db.VarChar(20)
+  purpose      String    @db.VarChar(200)
+  dueDate      DateTime  @map("due_date") @db.Date
+  reviewedBy   Int?      @map("reviewed_by")
+  reviewedAt   DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  rejectReason String?   @map("reject_reason") @db.VarChar(200)
+  lentAt       DateTime? @map("lent_at") @db.Timestamptz(6)
+  returnedAt   DateTime? @map("returned_at") @db.Timestamptz(6)
+  cancelledBy  Int?      @map("cancelled_by")
+  cancelledAt  DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  /// 申請日時
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Restrict, map: "fk_loans_equipment_id")
+  borrower  User      @relation("LoanBorrower", fields: [borrowerId], references: [id], onDelete: Restrict, map: "fk_loans_borrower_id")
+  reviewer  User?     @relation("LoanReviewer", fields: [reviewedBy], references: [id], onDelete: Restrict, map: "fk_loans_reviewed_by")
+  canceller User?     @relation("LoanCanceller", fields: [cancelledBy], references: [id], onDelete: Restrict, map: "fk_loans_cancelled_by")
+
+  @@index([equipmentId, status], map: "idx_loans_equipment_id_status")
+  @@index([borrowerId, createdAt(sort: Desc)], map: "idx_loans_borrower_id_created_at")
+  @@index([status, dueDate], map: "idx_loans_status_due_date")
+  @@map("loans")
+}
+
+/// 操作履歴（追記のみ。UPDATE・DELETE しない）
+model AuditLog {
+  id      Int    @id @default(autoincrement())
+  actorId Int    @map("actor_id")
+  /// equipment.create など（CHECK 制約 chk_audit_logs_action）
+  action  String @db.VarChar(50)
+  /// equipment | loan（CHECK 制約 chk_audit_logs_target_type）
+  targetType String @map("target_type") @db.VarChar(20)
+  /// 対象の ID。外部キー制約は付けない（ポリモーフィック関連）
+  targetId   Int    @map("target_id")
+  detail     Json   @default("{}") @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict, map: "fk_audit_logs_actor_id")
+
+  @@index([createdAt(sort: Desc)], map: "idx_audit_logs_created_at")
+  @@index([targetType, targetId], map: "idx_audit_logs_target")
+  @@index([actorId], map: "idx_audit_logs_actor_id")
+  @@map("audit_logs")
+}

@@ -145,13 +145,11 @@ Windows 側で Git を設定済みでも、**Ubuntu の中では別に設定が�
 
 **必ず Ubuntu のホームディレクトリ（`~`）の下にクローンしてください。** Windows 側のフォルダ（`/mnt/c/...`）に置くと、ファイルの読み書きが遅くなり、画面の自動更新が効かないことがあります。
 
-<!-- TODO(leader): <OWNER>/<REPO> を実際のリポジトリに置き換える -->
-
 ```bash
 mkdir -p ~/dev
 cd ~/dev
-git clone git@github.com:<OWNER>/<REPO>.git
-cd <REPO>
+git clone git@github.com:ayaka-tsu/equipment-lending-system.git
+cd equipment-lending-system
 pwd
 ```
 
@@ -174,7 +172,7 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.7/install.sh | bash
 **ターミナルを一度閉じて開き直してから**、リポジトリのディレクトリで実行します。
 
 ```bash
-cd ~/dev/<REPO>
+cd ~/dev/equipment-lending-system
 nvm install
 node -v
 ```

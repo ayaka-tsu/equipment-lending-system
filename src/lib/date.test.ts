@@ -8,7 +8,7 @@ import {
   isSelectableDueDate,
   todayInJst,
   toJstDateString,
-} from "./date";
+} from "@/lib/date";
 
 /**
  * 日付の判定は日本時間で行う（BR-18 / NFR-E-04）。

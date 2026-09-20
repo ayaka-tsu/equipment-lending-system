@@ -15,6 +15,8 @@
 | 05    | [テーブル定義書](05_table_definitions.md)                                    | カラム・制約・インデックス                                                               |
 | 06    | [API設計書](06_api_design.md)                                                | API の共通仕様・エンドポイント一覧・エラーコード                                         |
 | 06-a  | [OpenAPI 定義](api/openapi.yaml)                                             | API の詳細仕様（リクエスト／レスポンスのスキーマ）                                       |
+| 07    | [開発計画（Issue 一覧）](07_backlog.md)                                      | Issue の分解・見積もり・週ごとの計画。各 Issue の本文は [issues/](issues/)               |
+| －    | [開発の進め方](../CONTRIBUTING.md)                                           | ブランチ・コミット・PR・レビューのルール                                                 |
 | －    | [画面デザイン（Figma）](https://www.figma.com/design/1ObWsUfnxoIEvQl86inEBv) | 色・文字・共通部品・全画面のデザイン。画面の見た目はこちらを、動作は画面仕様書を正とする |
 
 ## 読む順番

@@ -1,0 +1,45 @@
+name: 仕様確認
+description: 仕様書を読んでも判断できないことを確認する
+title: "[仕様確認] "
+labels: ["type:question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **実装者の判断で仕様を変えないでください。** 迷ったらこの Issue で確認します。
+        担当している Issue の中で完結する質問なら、その Issue にコメントするだけで構いません。
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 確認したいこと
+      description: 「どちらの解釈が正しいか」が分かる形で書く
+    validations:
+      required: true
+
+  - type: textarea
+    id: docs
+    attributes:
+      label: 読んだ仕様
+      description: どの文書のどこを読んだうえで分からなかったか（要件ID・画面ID）
+    validations:
+      required: true
+
+  - type: textarea
+    id: options
+    attributes:
+      label: 考えられる案
+      description: 自分なりの案があれば書く（なくてもよい）
+      value: |
+        - 案1：
+        - 案2：
+    validations:
+      required: false
+
+  - type: input
+    id: blocking
+    attributes:
+      label: 関連する Issue
+      placeholder: "#12"
+    validations:
+      required: false

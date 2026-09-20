@@ -1,0 +1,76 @@
+name: 実装タスク
+description: 機能を実装するための Issue（チームリーダーが作成します）
+title: "[TASK] "
+labels: ["type:feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        実装を始める前に、下の「対象の仕様」に書かれた文書を必ず読んでください。
+        分からないことは自分で決めずに、この Issue にコメントで質問してください。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: この Issue で何を実現するか。なぜ必要かも1〜2文で。
+      placeholder: 社員が備品を検索して、借りられるかどうかを自分で確認できるようにする。
+    validations:
+      required: true
+
+  - type: textarea
+    id: spec
+    attributes:
+      label: 対象の仕様
+      description: 関連する要件ID・画面ID・API を書く（docs/ へのリンク）
+      value: |
+        - 機能要件：
+        - 業務ルール：
+        - 非機能要件：
+        - 画面：
+        - API：
+    validations:
+      required: true
+
+  - type: textarea
+    id: todo
+    attributes:
+      label: やること
+      description: チェックリスト形式で書く
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受入条件
+      description: これが満たされていればレビューを通す、という条件
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: hints
+    attributes:
+      label: 実装の手がかり
+      description: 詰まりやすい点や、参考になる資料
+    validations:
+      required: false
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: この Issue でやらないこと
+    validations:
+      required: false
+
+  - type: input
+    id: estimate
+    attributes:
+      label: 見積もり（時間）
+      placeholder: "8h"
+    validations:
+      required: false

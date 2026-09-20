@@ -1,0 +1,48 @@
+name: 不具合
+description: 動かない・仕様と違う挙動を見つけたとき
+title: "[BUG] "
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 起きていること
+      description: 画面のどこで、何をしたときに、どうなるか
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 本来どうあるべきか
+      description: 仕様のどこに書かれているか（要件ID・画面ID）も書く
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: エラーメッセージ・ログ
+      description: スクリーンショットではなく、テキストで全文を貼る
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: environment
+    attributes:
+      label: 環境
+      placeholder: "Windows 11 / WSL2 Ubuntu / Chrome"
+    validations:
+      required: false

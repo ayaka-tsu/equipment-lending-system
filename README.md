@@ -79,6 +79,7 @@
    `WSL バージョン` が `2.1.5` 以上であれば OK です。古い場合は `wsl --update` を実行してください。
 
 > `wsl --install` を実行してヘルプが表示された場合は、WSL が既に入っています。`wsl --install -d Ubuntu` を実行してください。
+> `wsl --install` が正常に完了して再起動した後、`wsl -l -v` で Ubuntu が表示されない場合は、`wsl --install -d Ubuntu` を実行してください。
 
 ### 2-2. Docker Desktop を入れる
 

@@ -172,18 +172,18 @@
 
 ### 8.3 技術スタック
 
-| 区分               | 採用技術                           | 備考                                                                    |
-| ------------------ | ---------------------------------- | ----------------------------------------------------------------------- |
-| 言語               | TypeScript                         |                                                                         |
-| 実行環境           | Node.js 24                         | `.nvmrc` で固定する。Vercel の既定バージョンと合わせる                  |
-| フレームワーク     | Next.js（App Router）              | API は Route Handlers で実装する（[06 API設計書](06_api_design.md)）    |
-| DB                 | PostgreSQL 17                      | 開発・CI・本番でメジャーバージョンをそろえる                            |
-| 開発環境の DB      | Docker Compose                     | アプリ本体はコンテナに入れず、ホストで起動する                          |
-| 本番のホスティング | Vercel                             |                                                                         |
-| 本番の DB          | Neon（Vercel Marketplace 経由）    |                                                                         |
-| CI                 | GitHub Actions                     | CI 用の DB は PostgreSQL 17 のサービスコンテナ                          |
-| ORM                | Prisma 7                           | CHECK 制約と部分ユニークインデックスはマイグレーションの SQL に直接書く |
-| CSS                | Tailwind CSS 4                     | 色・角丸・フォントは `src/app/globals.css` のデザイントークンを使う     |
-| テスト             | Vitest                             | 日付の判定を確かめるため `TZ=UTC` で実行する                            |
-| 整形・静的解析     | ESLint／Prettier                   | コミット前に husky + lint-staged で自動実行                             |
-| 認証ライブラリ     | 未決（自前のセッション管理を想定） | 未決事項 Q-01                                                           |
+| 区分               | 採用技術                                             | 備考                                                                    |
+| ------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| 言語               | TypeScript                                           |                                                                         |
+| 実行環境           | Node.js 24                                           | `.nvmrc` で固定する。Vercel の既定バージョンと合わせる                  |
+| フレームワーク     | Next.js（App Router）                                | API は Route Handlers で実装する（[06 API設計書](06_api_design.md)）    |
+| DB                 | PostgreSQL 17                                        | 開発・CI・本番でメジャーバージョンをそろえる                            |
+| 開発環境の DB      | Docker Compose                                       | アプリ本体はコンテナに入れず、ホストで起動する                          |
+| 本番のホスティング | Vercel                                               |                                                                         |
+| 本番の DB          | Neon（Vercel Marketplace 経由）                      |                                                                         |
+| CI                 | GitHub Actions                                       | CI 用の DB は PostgreSQL 17 のサービスコンテナ                          |
+| ORM                | Prisma 7                                             | CHECK 制約と部分ユニークインデックスはマイグレーションの SQL に直接書く |
+| CSS                | Tailwind CSS 4                                       | 色・角丸・フォントは `src/app/globals.css` のデザイントークンを使う     |
+| テスト             | Vitest                                               | 日付の判定を確かめるため `TZ=UTC` で実行する                            |
+| 整形・静的解析     | ESLint／Prettier                                     | コミット前に husky + lint-staged で自動実行                             |
+| 認証               | 自前で実装（セッションを `sessions` テーブルに保存） | ライブラリは使わない（Q-01 で決定）。NFR-S-02〜S-05 に従う              |

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import { sessionCookieOptions } from "@/server/auth/session-cookie";
 import {
   SESSION_TTL_MS,
   generateSessionToken,
   hashSessionToken,
   isSessionValid,
-  sessionCookieOptions,
-} from "@/server/auth/session";
+} from "@/server/auth/token";
 
 describe("セッショントークン（NFR-S-03）", () => {
   it("32バイト以上の乱数から作られ、毎回異なる", () => {

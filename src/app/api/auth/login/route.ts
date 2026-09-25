@@ -1,14 +1,15 @@
 /**
  * POST /api/auth/login — ログイン（FR-01 / BR-17）
- * docs/06_api_design.md、docs/api/openapi.yaml
+ *
+ * Route Handler は HTTP のことだけを担当する（docs/06_api_design.md 1章）。
+ * 認証そのものと DB アクセスはサービス層（server/auth/auth-service.ts）にある。
  */
 import { z } from "zod";
 
-import { verifyPassword } from "@/server/auth/password";
-import { createSession, getCurrentUser } from "@/server/auth/session";
+import { authenticate } from "@/server/auth/auth-service";
+import { startSession } from "@/server/auth/session";
 import { checkOrigin } from "@/server/http/origin";
 import { errorResponse, jsonResponse, readJsonBody } from "@/server/http/response";
-import { prisma } from "@/lib/prisma";
 
 const loginSchema = z.object({
   email: z
@@ -41,24 +42,9 @@ export async function POST(request: Request) {
   }
 
   const { email, password } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  const user = await authenticate(email, password);
+  if (!user) return errorResponse("INVALID_CREDENTIALS");
 
-  // 存在しないメールアドレスでも、パスワードが違う場合と同じ応答にする（BR-17）
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    return errorResponse("INVALID_CREDENTIALS");
-  }
-
-  await createSession(user.id);
-
-  const loggedIn = await getCurrentUser();
-  return jsonResponse(
-    loggedIn ?? {
-      id: user.id,
-      employeeCode: user.employeeCode,
-      name: user.name,
-      email: user.email,
-      department: user.department,
-      role: user.role,
-    },
-  );
+  await startSession(user.id);
+  return jsonResponse(user);
 }

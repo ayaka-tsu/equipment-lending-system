@@ -3,6 +3,8 @@
  *
  * コメントに書いた文書のパス（docs/...）と要件ID（FR-xx / BR-xx / NFR-X-xx / SCR-xx）が、
  * 実際に docs/ に存在することを検査する。リンク切れはレビューではなくテストで落とす。
+ *
+ * 対象は `src/` と `e2e/`。E2E のテスト名にも要件IDを書くため、同じ検査をかける。
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -20,7 +22,9 @@ function listFiles(dir: string, filter: (path: string) => boolean): string[] {
   });
 }
 
-const sourceFiles = listFiles(join(ROOT, "src"), (p) => /\.tsx?$/.test(p));
+const sourceFiles = ["src", "e2e"].flatMap((dir) =>
+  listFiles(join(ROOT, dir), (p) => /\.tsx?$/.test(p)),
+);
 const sources = sourceFiles.map((path) => ({ path, text: readFileSync(path, "utf-8") }));
 
 const docsText = listFiles(join(ROOT, "docs"), (p) => p.endsWith(".md"))

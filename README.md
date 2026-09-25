@@ -258,6 +258,31 @@ npm run typecheck
 npm test
 ```
 
+### 4-8. E2E テストを動かす
+
+E2E テストは、ブラウザを自動で操作して画面の動きを確かめるテストです（Playwright）。最初の1回だけ、ブラウザ本体を入れる必要があります。
+
+**Windows（WSL）の場合**：Chromium が動くのに必要なライブラリも入れます。Ubuntu のパスワードを聞かれます。
+
+```bash
+npx playwright install-deps chromium
+npm run e2e:install
+```
+
+**Mac の場合**：
+
+```bash
+npm run e2e:install
+```
+
+入ったら、次で実行します。データベースが起動していて、`npm run db:seed` が済んでいる必要があります。
+
+```bash
+npm run test:e2e
+```
+
+`npm run dev` を動かしていればそのサーバーを使い、動かしていなければビルドしてから実行します（1〜2分かかります）。`npm run test:e2e:ui` を使うと、ブラウザの画面を見ながら1件ずつ実行できます。
+
 ここまでエラーなく進めば、環境構築は完了です。
 
 ---
@@ -324,6 +349,8 @@ npm run db:migrate
 | `npm run format`       | Prettier で整形する（`npm run format:check` で確認だけ）            |
 | `npm run typecheck`    | TypeScript の型チェックをする                                       |
 | `npm test`             | テストを実行する（`npm run test:watch` で変更を監視）               |
+| `npm run test:e2e`     | E2E テストを実行する（`npm run test:e2e:ui` で画面を見ながら実行）  |
+| `npm run e2e:install`  | E2E 用のブラウザ（Chromium）を入れる。最初の1回だけ                 |
 | `npm run db:migrate`   | マイグレーションを実行してテーブルを最新にする                      |
 | `npm run db:seed`      | 初期データを入れる（何度実行しても同じ結果になる）                  |
 | `npm run db:reset`     | DB を作り直してマイグレーションとシードを実行する（データは消える） |
@@ -356,6 +383,9 @@ Git のフック（husky）で、次のチェックが自動で走ります。**
 | `npm ci` が失敗する、`node -v` が 24 でない                                    | リポジトリのディレクトリで `nvm install` を実行する。                                                                                                                                          |
 | ログインできない                                                               | `npm run db:seed` を実行していない。4-4 を実行する。                                                                                                                                           |
 | Git ですべてのファイルが「変更あり」になる                                     | Windows 側の Git や別のエディタで、同じフォルダを開いた可能性がある。Ubuntu の中でクローンしたフォルダだけを使う。                                                                             |
+| E2E で `browserType.launch: Executable doesn't exist`                          | ブラウザ本体が入っていない。4-8 の `npm run e2e:install` を実行する。                                                                                                                          |
+| E2E で Chromium が起動せず、共有ライブラリが無いと言われる（WSL）              | 4-8 の `npx playwright install-deps chromium` を実行する。                                                                                                                                     |
+| E2E のログイン系だけがまとめて落ちる                                           | 初期データが入っていない。`npm run db:seed` を実行する。                                                                                                                                       |
 
 解決しないときは、Issue に次の3つを貼って相談してください。
 

@@ -7,6 +7,20 @@ type FieldErrors = { email?: string; password?: string };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Figma の FormField（node 3:92）に合わせたラベル＋必須バッジ。 */
+function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <label htmlFor={htmlFor} className="text-[14px] leading-[22px] font-medium text-text">
+        {children}
+      </label>
+      <span className="rounded-[4px] bg-danger-subtle px-1.5 text-[12px] leading-[18px] font-medium text-danger">
+        必須
+      </span>
+    </div>
+  );
+}
+
 export function LoginForm({ sessionExpired }: { sessionExpired: boolean }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -59,21 +73,19 @@ export function LoginForm({ sessionExpired }: { sessionExpired: boolean }) {
     }
   }
 
+  const inputClass =
+    "rounded-md border border-border-strong bg-surface px-3 py-[9px] text-[14px] leading-[22px] text-text outline-none focus:border-primary";
+
   return (
-    <form onSubmit={handleSubmit} noValidate className="mt-6 flex flex-col gap-5">
+    <form onSubmit={handleSubmit} noValidate className="flex w-full flex-col gap-5">
       {sessionExpired && (
-        <p className="rounded-md border border-warning-border bg-warning-subtle px-4 py-3 text-sm text-warning-text">
+        <p className="rounded-md border border-warning-border bg-warning-subtle px-4 py-3 text-[14px] leading-[22px] font-medium text-warning-text">
           セッションの有効期限が切れました。再度ログインしてください。
         </p>
       )}
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="flex items-center gap-1.5 text-sm font-medium">
-          メールアドレス
-          <span className="rounded-sm bg-danger-subtle px-1.5 text-xs font-medium text-danger">
-            必須
-          </span>
-        </label>
+        <FieldLabel htmlFor="email">メールアドレス</FieldLabel>
         <input
           id="email"
           name="email"
@@ -82,18 +94,15 @@ export function LoginForm({ sessionExpired }: { sessionExpired: boolean }) {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={Boolean(fieldErrors.email)}
-          className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
+          className={inputClass}
         />
-        {fieldErrors.email && <p className="text-xs text-danger">{fieldErrors.email}</p>}
+        {fieldErrors.email && (
+          <p className="text-[12px] leading-[18px] text-danger">{fieldErrors.email}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="flex items-center gap-1.5 text-sm font-medium">
-          パスワード
-          <span className="rounded-sm bg-danger-subtle px-1.5 text-xs font-medium text-danger">
-            必須
-          </span>
-        </label>
+        <FieldLabel htmlFor="password">パスワード</FieldLabel>
         <input
           id="password"
           name="password"
@@ -102,15 +111,17 @@ export function LoginForm({ sessionExpired }: { sessionExpired: boolean }) {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           aria-invalid={Boolean(fieldErrors.password)}
-          className="rounded-md border border-border-strong bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
+          className={inputClass}
         />
-        {fieldErrors.password && <p className="text-xs text-danger">{fieldErrors.password}</p>}
+        {fieldErrors.password && (
+          <p className="text-[12px] leading-[18px] text-danger">{fieldErrors.password}</p>
+        )}
       </div>
 
       {formError && (
         <p
           role="alert"
-          className="rounded-md border border-danger-border bg-danger-subtle px-4 py-3 text-sm text-danger"
+          className="rounded-md border border-danger-border bg-danger-subtle px-4 py-3 text-[14px] leading-[22px] font-medium text-danger"
         >
           {formError}
         </p>
@@ -119,7 +130,7 @@ export function LoginForm({ sessionExpired }: { sessionExpired: boolean }) {
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-text-on-primary hover:bg-primary-hover disabled:opacity-40"
+        className="rounded-md bg-primary px-4 py-2 text-[14px] leading-[22px] font-medium text-text-on-primary hover:bg-primary-hover disabled:opacity-40"
       >
         {submitting ? "送信中…" : "ログイン"}
       </button>

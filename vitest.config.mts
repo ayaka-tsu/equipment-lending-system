@@ -7,6 +7,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // .env を読み込む（セッション周りのモジュールが DATABASE_URL を参照するため）
+    setupFiles: ["dotenv/config"],
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     // 日付の判定がサーバーのタイムゾーンに依存していないことを確かめるため、
     // テストは UTC で実行する（NFR-E-04）。

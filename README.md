@@ -3,7 +3,7 @@
 株式会社ノースブリッジ（架空の会社）の総務部向けに、備品の貸出申請から返却までを管理する Web システムです。
 
 - 仕様書：[docs/](docs/README.md)
-- 開発ボード：[GitHub Projects](https://github.com/users/hata-tomoyuki/projects/2)（Issue の進み具合はここで見ます）
+- 開発ボード：[GitHub Projects](https://github.com/users/ayaka-tsu/projects/1)（Issue の進み具合はここで見ます）
 - 技術スタック：Next.js（App Router）／TypeScript／PostgreSQL 17／Docker Compose（開発用 DB）／Vercel・Neon（本番）
 
 ---

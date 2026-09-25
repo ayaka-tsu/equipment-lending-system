@@ -18,7 +18,7 @@ Pull Request を出す
 
 ### 1-0. ボードで状況を共有する
 
-担当している Issue の状況は、[開発ボード](https://github.com/users/hata-tomoyuki/projects/2)のカードを動かして共有します。
+担当している Issue の状況は、[開発ボード](https://github.com/users/ayaka-tsu/projects/1)のカードを動かして共有します。
 
 | 列           | いつ動かすか                     | 自動／手動 |
 | ------------ | -------------------------------- | ---------- |

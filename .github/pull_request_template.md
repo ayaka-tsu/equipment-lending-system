@@ -27,7 +27,7 @@ Closes #
 
 ## セルフチェック
 
-- [ ] `npm run lint` `npm run typecheck` `npm test` が通る
+- [ ] `npm run lint` `npm run typecheck` `npm test` `npm run test:e2e` が通る
 - [ ] 仕様書（要件ID・画面ID）のとおりに動く
 - [ ] 権限チェックをサーバー側でも行っている（NFR-S-06）
 - [ ] 入力チェックをサーバー側でも行っている（NFR-S-08）

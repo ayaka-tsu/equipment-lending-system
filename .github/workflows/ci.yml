@@ -11,6 +11,8 @@ concurrency:
 
 jobs:
   verify:
+    # このジョブ名は main の保護設定（必須チェック）に登録されている。
+    # 変えると必須チェックが一生 pending になり、PR がマージできなくなる。
     name: lint / typecheck / test / build
     runs-on: ubuntu-latest
 
@@ -62,3 +64,21 @@ jobs:
 
       - name: ビルド
         run: npm run build
+
+      # ここから E2E（Playwright）。ブラウザから実際に操作して受入条件を確かめる
+      - name: ブラウザのインストール
+        run: npx playwright install --with-deps chromium
+
+      - name: シードの投入
+        run: npm run db:seed
+
+      - name: E2E テスト
+        run: npm run test:e2e
+
+      - name: E2E の結果をアップロード
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

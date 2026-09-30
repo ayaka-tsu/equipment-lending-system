@@ -4,3 +4,5 @@ src/generated
 prisma/migrations
 package-lock.json
 docs/api/openapi.yaml
+playwright-report
+test-results

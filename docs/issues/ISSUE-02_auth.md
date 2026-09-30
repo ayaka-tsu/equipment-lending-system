@@ -40,9 +40,13 @@
 
 ## 実装の手がかり
 
+**認証ライブラリは使わず、自前で実装する**（未決事項 Q-01 で決定）。Auth.js などは導入しない。
+
 - 乱数は `crypto.randomBytes(32).toString("base64url")`、ハッシュは `crypto.createHash("sha256")` で作れる。
-- Cookie の読み書きは Next.js の `cookies()` を使う。
+- **Cookie の読み書きは `cookies()` を使う。`await` が必要**（`const cookieStore = await cookies()`）。
 - セッションの検証は毎回使うので、`src/server/auth/` のような場所に関数としてまとめておくと、次の Issue から使い回せる。
+- **リクエスト全体に共通の処理（`Origin` の検証など）を1か所に置く場合、Next.js 16 では `middleware.ts` ではなく `proxy.ts` を使う。** `middleware.ts` は非推奨になり、`proxy.ts` に名前が変わっている。ネット上の記事は `middleware` 前提のものが多いので注意する。
+- **調べるときは、まずリポジトリに同梱されている Next.js の公式ドキュメントを見る。** `node_modules/next/dist/docs/01-app/02-guides/authentication.md` に、今回と同じ「DB にセッションを保存する方式（Database Sessions）」と「Cookie の推奨オプション」の節がある。
 
 ## この Issue でやらないこと
 

@@ -46,5 +46,5 @@ test("有効期限が切れたセッションでは、ログイン状態とし�
   expect(response.status()).toBe(401);
 
   await page.goto("/");
-  await expect(page.getByText("ログインしていません。")).toBeVisible();
+  await expect(page).toHaveURL("/login?reason=expired");
 });

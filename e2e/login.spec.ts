@@ -13,7 +13,9 @@ test("正しいメールアドレスとパスワードでログインでき、�
   await submitLogin(page, MEMBER);
 
   await expect(page).toHaveURL("/");
-  await expect(page.getByText(`${MEMBER.name}（${MEMBER.department}）`)).toBeVisible();
+  await expect(
+    page.getByRole("banner").getByText(`${MEMBER.name}（${MEMBER.department}）`),
+  ).toBeVisible();
 });
 
 test("パスワードが誤っているとログインできず、パスワード欄だけが空になる", async ({ page }) => {

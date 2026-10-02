@@ -21,13 +21,13 @@ test("ログアウトすると Cookie が消え、sessions の行も消える", 
   expect(await findSessionByToken(token)).toBeNull();
 });
 
-test("ログアウトしたあとにホームを開いても、ログイン状態に戻らない", async ({ page }) => {
+test("ログアウトしたあとにホームを開くと、ログイン画面へ戻される（FR-03）", async ({ page }) => {
   await login(page, MEMBER);
   await page.getByRole("button", { name: "ログアウト" }).click();
   await expect(page).toHaveURL("/login");
 
   await page.goto("/");
 
-  await expect(page.getByText("ログインしていません。")).toBeVisible();
-  await expect(page.getByRole("button", { name: "ログアウト" })).toBeHidden();
+  await expect(page).toHaveURL("/login");
+  await expect(page.getByRole("banner")).toHaveCount(0);
 });
